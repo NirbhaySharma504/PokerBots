@@ -10,6 +10,7 @@ ap.add_argument("--bot", default=os.path.join(ROOT, "bot.py"))
 ap.add_argument("--opp", default=os.path.join(ROOT, "ab/v1.py"))
 ap.add_argument("--seeds", default="1-12"); ap.add_argument("-j", type=int, default=6)
 ap.add_argument("--hands", type=int, default=400)
+ap.add_argument("--stage", default="1")
 a = ap.parse_args()
 lo, hi = map(int, a.seeds.split("-"))
 tmp = tempfile.mkdtemp(prefix="pbab_")
@@ -23,7 +24,7 @@ open(wrapper, "w").write(
 opp = a.opp if os.path.isabs(a.opp) or a.opp.startswith("ab/") is False else os.path.join(ROOT, a.opp)
 opp = os.path.abspath(opp if os.path.exists(opp) else os.path.join(ROOT, "opponents", a.opp + ".py"))
 def one(seed):
-    r = subprocess.run([sys.executable, ENGINE, wrapper, opp, "--seed", str(seed), "--hands", str(a.hands),
+    r = subprocess.run([sys.executable, ENGINE, wrapper, opp, "--seed", str(seed), "--stage", a.stage, "--hands", str(a.hands),
                         "--log-dir", ""], capture_output=True, text=True)
     m = re.search(r"A\s+\S+\s+net\s+([+-]?\d+)\s+time used\s+([\d.]+)", r.stdout)
     if not m:
