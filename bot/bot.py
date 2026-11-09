@@ -31,9 +31,9 @@ RNG = np.random.default_rng()
 P = {
     "open_t": 0.50, "limp_t": 0.42, "open_size": 0.75, "bb_raise_t": 0.60,
     "pf_reraise_t": 0.62, "pf_call_margin": 0.04,
-    "raise_t": 0.68, "call_margin": 0.03, "bluff_raise": 0.15,
-    "bet_t": 0.58, "bet_base": 0.45, "bet_slope": 1.6, "bluff_scale": 2.5,
-    "disc_w": 0.35, "agg_floor": 0.08,
+    "raise_t": 0.68, "call_margin": 0.03, "bluff_raise": 0.3,
+    "bet_t": 0.58, "bet_base": 0.45, "bet_slope": 2.4, "bluff_scale": 2.5,
+    "disc_w": 0.35, "agg_floor": 0.08, "mdf": 0.0,
 }
 try:
     import os
@@ -354,6 +354,7 @@ class Bot:
         self.seat = None
         self.my_discard = None
         self.opp_discard = None
+        self.faced = {"flop": [], "turn": [], "river": []}  # our equities when facing bets
 
     # --------------------------------------------------- range weights
     def opp_street_actions(self, history):
@@ -518,10 +519,13 @@ class Bot:
 
         if to_call > 0:
             odds = to_call / (pot + to_call)
+            self.faced[street].append(E)
             margin = 0.0 if street == "river" else P["call_margin"]
             if can_raise and E > P["raise_t"] + (0.04 if req["raises_left"] < 3 else 0.0):
                 return self.act("raise", self.raise_to(req, 0.9 if E > 0.85 else 0.7))
             if E >= odds + margin:
+                return self.act("call")
+            if self.mdf_defend(street, E, odds, o):
                 return self.act("call")
             # occasional bluff-raise vs folders, with some equity on early streets
             if can_raise and street != "river" and fold_f > 0.55 and E > 0.25 and rr < P["bluff_raise"]:
@@ -547,6 +551,18 @@ class Bot:
         if rr < p * P["bluff_scale"]:
             return self.act("raise", self.raise_to(req, 0.6))
         return self.act("check")
+
+    def mdf_defend(self, street, E, odds, o):
+        """Don't over-fold vs frequent bettors: continue with the top (1 - k*alpha)
+        of the equities we've held when facing a bet on this street.
+        alpha = odds of a bet is exactly the fold share that makes a pure bluff break even."""
+        k = P["mdf"]
+        hist = self.faced[street]
+        if k <= 0 or len(hist) < 15 or o.po_agg < 0.4 or E < 0.6 * odds:
+            return False
+        fold_cap = min(0.9, k * odds / (1 - odds))  # alpha = bet / (pot + bet)
+        rank = sum(1 for e in hist if e < E) / len(hist)
+        return rank >= fold_cap
 
     def preflop(self, req, E, rr):
         legal = req["legal_actions"]
