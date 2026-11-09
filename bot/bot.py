@@ -33,7 +33,7 @@ P = {
     "pf_reraise_t": 0.62, "pf_call_margin": 0.04,
     "raise_t": 0.68, "call_margin": 0.03, "bluff_raise": 0.3,
     "bet_t": 0.58, "bet_base": 0.45, "bet_slope": 2.4, "bluff_scale": 2.5,
-    "disc_w": 0.35, "agg_floor": 0.08, "mdf": 0.0, "size_aware": 1, "balanced": 0, "bal_frac": 0.7, "bluff_size": 0.85, "trap_p": 0.4, "station_cap": 1.6,
+    "disc_w": 0.35, "agg_floor": 0.08, "mdf": 0.0, "size_aware": 1, "balanced": 0, "bal_frac": 0.7, "bluff_size": 0.85, "trap_p": 0.4, "steal_k": 0.1, "disc_learn": 0, "station_cap": 1.6,
 }
 try:
     import os
@@ -221,7 +221,7 @@ class OppModel:
             "pf_face_n", "pf_face_fold", "pf_face_raise",
             "po_open_n", "po_open",
             "po_face_n", "po_face_fold", "po_face_raise",
-            "sd_n", "agg_sd_n", "agg_sd_weak", "po_open_mid", "po_open_big", "hands")}
+            "sd_n", "agg_sd_n", "agg_sd_weak", "po_open_mid", "po_open_big", "disc_n", "disc_heur", "disc_low", "hands")}
 
     def f(self, a, n, prior, w):
         return (self.c[a] + prior * w) / (self.c[n] + w)
@@ -268,6 +268,23 @@ class OppModel:
     def bluff_rate(self):
         """Share of opponent postflop aggression that turned out weak at showdown."""
         return self.f("agg_sd_weak", "agg_sd_n", 0.25, 4)
+
+    @property
+    def disc_style(self):
+        """(share of showdowns matching our keep heuristic, share discarding the lowest card)"""
+        n = self.c["disc_n"]
+        return ((self.c["disc_heur"] + 0.6 * 4) / (n + 4), (self.c["disc_low"] + 0.2 * 4) / (n + 4))
+
+    def learn_discard(self, msg):
+        opp, od = msg.get("opp_hole_cards"), msg.get("opp_discard")
+        board = msg.get("board") or []
+        if msg.get("result") != "showdown" or not opp or not od or len(board) < 3:
+            return
+        v3 = np.array([[CARD_ID[opp[0]], CARD_ID[opp[1]], CARD_ID[od]]])
+        kv = keep_values(v3, np.array([[CARD_ID[c] for c in board[:3]]]))
+        self.c["disc_n"] += 1
+        self.c["disc_heur"] += int(np.argmax(kv[0]) == 2)
+        self.c["disc_low"] += int(v3[0, 2] < v3[0, :2].min())
 
     def learn_showdown(self, msg):
         opp = msg.get("opp_hole_cards")
@@ -496,7 +513,16 @@ class Bot:
             w = self.weight_by_action(w, PCT3[v3[:, 0], v3[:, 1], v3[:, 2]], acts.get("preflop"), "preflop")
             kv = keep_values(v3, flop)
             # discard consistency: would our heuristic have discarded od (index 2)?
-            w = w * np.where(np.argmax(kv, 1) == 2, 1.0, P["disc_w"])
+            if P["disc_learn"]:
+                # mixture of discard styles learned from showdowns: our best-keep
+                # heuristic vs "throw the lowest card" (the starter bot's rule, which
+                # is simply the minimum card id). The rest is treated as noise.
+                ph, pl = self.opp.disc_style
+                heur = np.argmax(kv, 1) == 2
+                low = od < v2.min(1)
+                w = w * (0.25 + ph * heur + pl * low)
+            else:
+                w = w * np.where(np.argmax(kv, 1) == 2, 1.0, P["disc_w"])
             if acts.get("flop"):
                 w = self.weight_by_action(w, pct_rank(kv.max(1)), acts["flop"], "flop")
         if acts.get("turn") and len(b) >= 4:
@@ -629,7 +655,7 @@ class Bot:
         odds = to_call / (pot + to_call)
         if seat == "button" and req["my_bet"] == 1 and to_call == 1:
             # first in: open raise wide, limp middling, fold trash
-            open_t = P["open_t"] - 0.1 * (o.pf_fold - 0.3)
+            open_t = P["open_t"] - P["steal_k"] * (o.pf_fold - 0.3)
             if can_raise and E > open_t:
                 return self.act("raise", self.raise_to(req, P["open_size"]))
             if E > P["limp_t"]:
@@ -734,6 +760,7 @@ class Bot:
                 elif t == "hand_result":
                     self.opp.update(msg.get("history", []))
                     self.opp.learn_showdown(msg)
+                    self.opp.learn_discard(msg)
                 elif t == "init":
                     self.total_hands = msg.get("total_hands", 200)
                     self.time_bank = msg.get("time_bank_ms", 30000)
