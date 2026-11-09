@@ -33,7 +33,7 @@ P = {
     "pf_reraise_t": 0.62, "pf_call_margin": 0.04,
     "raise_t": 0.68, "call_margin": 0.03, "bluff_raise": 0.3,
     "bet_t": 0.58, "bet_base": 0.45, "bet_slope": 2.4, "bluff_scale": 2.5,
-    "disc_w": 0.35, "agg_floor": 0.08, "mdf": 0.0,
+    "disc_w": 0.35, "agg_floor": 0.08, "mdf": 0.0, "size_aware": 1, "balanced": 0, "bal_frac": 0.7,
 }
 try:
     import os
@@ -184,6 +184,36 @@ PCT3, EQ3 = build_pct3()
 
 # ----------------------------------------------------------- opponent model
 
+def replay(history):
+    """Walk a hand's history tracking bets. Yields (street, actor, action, r, facing)
+    where r = raise size / pot after calling (bet-to-pot ratio) for raises, else 0."""
+    out = []
+    street, pot, bets = None, 0, None
+    for h in history:
+        if h["street"] != street:
+            if street is None:  # preflop: the button acts first and posted 1
+                btn = h["actor"]
+                bets = {btn: 1, ("opp" if btn == "me" else "me"): 2}
+            else:
+                pot += bets["me"] + bets["opp"]
+                bets = {"me": 0, "opp": 0}
+            street = h["street"]
+        a, act = h["actor"], h["action"]
+        o = "opp" if a == "me" else "me"
+        facing = bets[o] > bets[a]
+        r = 0.0
+        if act == "raise":
+            amt = h.get("amount") or 0
+            after_call = pot + 2 * bets[o]
+            r = (amt - bets[o]) / max(1, after_call)
+            bets[a] = amt
+        elif act == "call":
+            bets[a] = bets[o]
+        out.append((street, a, act, r, facing))
+    return out
+
+
+
 class OppModel:
     def __init__(self):
         self.c = {k: 0 for k in (
@@ -191,7 +221,7 @@ class OppModel:
             "pf_face_n", "pf_face_fold", "pf_face_raise",
             "po_open_n", "po_open",
             "po_face_n", "po_face_fold", "po_face_raise",
-            "sd_n", "agg_sd_n", "agg_sd_weak", "hands")}
+            "sd_n", "agg_sd_n", "agg_sd_weak", "po_open_mid", "po_open_big", "hands")}
 
     def f(self, a, n, prior, w):
         return (self.c[a] + prior * w) / (self.c[n] + w)
@@ -221,6 +251,19 @@ class OppModel:
     def po_raise(self):
         return self.f("po_face_raise", "po_face_n", 0.12, 8)
 
+    def open_width(self, r):
+        """Share of opportunities where they open-bet at least this big (postflop)."""
+        if r > 1.2:
+            # Big bets only mean "strong" if they're rare. Someone overbetting a lot
+            # (maniac, polarized bluffer) sizes independently of strength, so blend
+            # back to their overall betting frequency as overbets get common.
+            raw = self.f("po_open_big", "po_open_n", 0.05, 6)
+            t = min(1.0, max(0.0, (raw - 0.06) / 0.12))
+            return raw + (max(raw, self.po_agg) - raw) * t
+        if r > 0.6:
+            return (self.c["po_open_mid"] + self.c["po_open_big"] + 0.15 * 6) / (self.c["po_open_n"] + 6)
+        return self.po_agg
+
     @property
     def bluff_rate(self):
         """Share of opponent postflop aggression that turned out weak at showdown."""
@@ -248,6 +291,12 @@ class OppModel:
             self.c["agg_sd_weak"] += 1
 
     def update(self, history):
+        for street, actor, act, r, facing in replay(history):
+            if actor == "opp" and street != "preflop" and act == "raise" and not facing:
+                if r > 1.2:
+                    self.c["po_open_big"] += 1
+                elif r > 0.6:
+                    self.c["po_open_mid"] += 1
         self.c["hands"] += 1
         street = None
         facing = {"me": False, "opp": False}
@@ -331,14 +380,17 @@ class Bot:
 
     # --------------------------------------------------- range weights
     def opp_street_actions(self, history):
-        """street -> dict(raises, calls, checks, faced_bet_first)."""
+        """street -> counts of the opponent's actions, plus the size (bet/pot) and kind
+        of their biggest raise on that street."""
         out = {}
-        for h in history:
-            if h["actor"] != "opp":
+        for street, actor, act, r, facing in replay(history):
+            if actor != "opp":
                 continue
-            d = out.setdefault(h["street"], {"raise": 0, "call": 0, "check": 0})
-            if h["action"] in d:
-                d[h["action"]] += 1
+            d = out.setdefault(street, {"raise": 0, "call": 0, "check": 0, "r": 0.0, "open": False})
+            if act in d:
+                d[act] += 1
+            if act == "raise" and r >= d["r"]:
+                d["r"], d["open"] = r, not facing
         return out
 
     def weight_by_action(self, w, pct, acts, street):
@@ -358,7 +410,13 @@ class Bot:
         if nr >= 2:
             w = w * soft(pct, 1 - min(open_f, face_raise) * 0.6, 0.07, floor)
         elif nr == 1:
-            w = w * soft(pct, 1 - max(open_f, face_raise), 0.08, floor)
+            width = max(open_f, face_raise)
+            if P["size_aware"] and street != "preflop":
+                if acts["open"]:
+                    width = o.open_width(acts["r"])
+                elif acts["r"] > 1.2:
+                    width = face_raise * 0.6
+            w = w * soft(pct, 1 - width, 0.08, floor)
         elif acts["call"]:
             w = w * soft(pct, fold_f * 0.8, 0.1, 0.1)
             w = w * (1 - 0.35 * soft(pct, 1 - face_raise, 0.05, 0.0))
@@ -497,7 +555,8 @@ class Bot:
             self.faced[street].append(E)
             margin = 0.0 if street == "river" else P["call_margin"]
             if can_raise and E > P["raise_t"] + (0.04 if req["raises_left"] < 3 else 0.0):
-                return self.act("raise", self.raise_to(req, 0.9 if E > 0.85 else 0.7))
+                return self.act("raise", self.raise_to(req, 0.8 if P["balanced"] and not station
+                                                       else (0.9 if E > 0.85 else 0.7)))
             if E >= odds + margin:
                 return self.act("call")
             if self.mdf_defend(street, E, odds, o):
@@ -517,6 +576,8 @@ class Bot:
             frac = P["bet_base"] + (E - thresh) * P["bet_slope"]
             if station:
                 frac *= 1.3
+            elif P["balanced"]:
+                frac = self.bal_size(rr)
             return self.act("raise", self.raise_to(req, min(1.1, frac)))
         # bluff / semi-bluff
         if street == "river":
@@ -524,8 +585,14 @@ class Bot:
         else:
             p = max(0.0, min(0.5, fold_f - 0.2)) * (1.0 if E > 0.3 else 0.5)
         if rr < p * P["bluff_scale"] and not self.panic:
-            return self.act("raise", self.raise_to(req, 0.6))
+            return self.act("raise", self.raise_to(req, self.bal_size(rr) if P["balanced"] else 0.6))
         return self.act("check")
+
+    @staticmethod
+    def bal_size(rr):
+        """Strength-independent bet size so sizing doesn't leak our hand. Uses a fresh
+        random draw so the size isn't correlated with the bluff decision."""
+        return P["bal_frac"] + 0.15 * (random.random() - 0.5)
 
     def mdf_defend(self, street, E, odds, o):
         """Don't over-fold vs frequent bettors: continue with the top (1 - k*alpha)
