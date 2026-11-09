@@ -33,7 +33,7 @@ P = {
     "pf_reraise_t": 0.62, "pf_call_margin": 0.04,
     "raise_t": 0.68, "call_margin": 0.03, "bluff_raise": 0.3,
     "bet_t": 0.58, "bet_base": 0.45, "bet_slope": 2.4, "bluff_scale": 2.5,
-    "disc_w": 0.35, "agg_floor": 0.08, "mdf": 0.0, "size_aware": 1, "balanced": 0, "bal_frac": 0.7,
+    "disc_w": 0.35, "agg_floor": 0.08, "mdf": 0.0, "size_aware": 1, "balanced": 0, "bal_frac": 0.7, "bluff_size": 0.85,
 }
 try:
     import os
@@ -585,7 +585,8 @@ class Bot:
         else:
             p = max(0.0, min(0.5, fold_f - 0.2)) * (1.0 if E > 0.3 else 0.5)
         if rr < p * P["bluff_scale"] and not self.panic:
-            return self.act("raise", self.raise_to(req, self.bal_size(rr) if P["balanced"] else 0.6))
+            size = self.bal_size(rr) if P["balanced"] else P["bluff_size"] + 0.2 * (random.random() - 0.5)
+            return self.act("raise", self.raise_to(req, size))
         return self.act("check")
 
     @staticmethod
