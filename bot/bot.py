@@ -33,7 +33,7 @@ P = {
     "pf_reraise_t": 0.62, "pf_call_margin": 0.04,
     "raise_t": 0.68, "call_margin": 0.03, "bluff_raise": 0.3,
     "bet_t": 0.58, "bet_base": 0.45, "bet_slope": 2.4, "bluff_scale": 2.5,
-    "disc_w": 0.35, "agg_floor": 0.08, "mdf": 0.0, "size_aware": 1, "balanced": 0, "bal_frac": 0.7, "bluff_size": 0.85,
+    "disc_w": 0.35, "agg_floor": 0.08, "mdf": 0.0, "size_aware": 1, "balanced": 0, "bal_frac": 0.7, "bluff_size": 0.85, "trap_p": 0.4, "station_cap": 1.6,
 }
 try:
     import os
@@ -572,13 +572,20 @@ class Bot:
         thresh = P["bet_t"] + {"flop": 0.0, "turn": 0.02, "river": 0.04}[street]
         if station:
             thresh -= 0.04
+        # trap: vs frequent bettors, check some monsters to induce a bluff, then raise
+        if (E > 0.8 and street != "river" and o.po_agg > 0.5 and not station
+                and random.random() < P["trap_p"]):
+            return self.act("check")
         if E > thresh:
             frac = P["bet_base"] + (E - thresh) * P["bet_slope"]
+            cap = 1.1
             if station:
                 frac *= 1.3
+                if E > 0.9:
+                    cap = P["station_cap"]
             elif P["balanced"]:
                 frac = self.bal_size(rr)
-            return self.act("raise", self.raise_to(req, min(1.1, frac)))
+            return self.act("raise", self.raise_to(req, min(cap, frac)))
         # bluff / semi-bluff
         if street == "river":
             p = max(0.0, min(0.35, fold_f - 0.35)) if E < 0.25 else 0.0
