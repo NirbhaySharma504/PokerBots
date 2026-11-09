@@ -40,11 +40,30 @@ Submission: `bot/bot.py` (single file, stdlib + numpy only). Deadline 15 Nov 202
 6. **Time control**: measures its own cost per sample and sizes the sample count to a fraction of
    `time_left_ms / hands_left`. Everything wrapped so an exception falls back to check/fold.
 
-### Next
-- [ ] Stronger sparring partners: a copy of ourselves, plus an equity-based bot that isn't ours
-- [ ] Parameter tuning (thresholds, sizing, bluff rates) via self-play / gauntlet sweeps
-- [ ] Opponent model from showdowns (do they bluff? how strong are their big bets?)
-- [ ] Better preflop strategy (position-aware, 3-bet/4-bet ranges, jam thresholds)
-- [ ] Discard as signal: what the opponent's discard says about the rest of their hand
-- [ ] Timing check under `taskset`/CPU throttling to simulate a slow 1 vCPU box
-- [ ] Final checklist from the README before uploading
+### Version history (each step A/B tested through the timed engine)
+| Version | Change | Result vs previous |
+|---|---|---|
+| v1 | baseline: evaluator, range-weighted MC, opponent stats | beats all archetypes |
+| v2 | bluff 2.5x more, learn bluff rate from showdowns | +540 +-101 (20/4) |
+| v3 | bigger value bets, more semi-bluff raises | +203 +-64 (32/16) |
+| v4 | read opponent bet sizes when narrowing their range | +900 +-73 (47/1) |
+| v5 | bluff with value-sized bets (hide our own sizing) | +334 +-81 (37/11) |
+| v6 | overbet calling stations with near-nuts, trap frequent bettors | station +1532, v5 +107 +-53 |
+
+v6 also beats v1 / v2 / v3 / v1_aggro by +700 to +800 each (no rock-paper-scissors).
+
+Tried and rejected (no gain or worse): minimum-defense-frequency calling, fully fixed bet sizing,
+looser calling margins, preflop threshold/size changes, wider steals vs folders, learned
+discard-style model.
+
+### Pre-submission check (v6)
+- 18/18 wins vs random, check/call, station, maniac, nit, tag, eqbot, polar, lag_eq; 0 notices
+- time: <= ~12s of the 30s bank per leg with 7 matches in parallel; ~31s of 75s in stage 2
+- 4 parallel matches pinned to efficiency cores: all finish, max 14.7s per leg
+- lean / panic modes driven by engine-reported `time_left_ms`; start-up 0.19s, ~40MB
+- protocol fuzz: unknown types/fields, malformed lines, notices -> ignored; exits on match_end
+
+### Open ideas
+- [ ] a stronger, independent size-reading opponent to test v5/v6 sizing against
+- [ ] more careful river play (thin value, bluff-catching vs polarized bettors)
+- [ ] stage 2 (1000 hands): trust the opponent model sooner / weaker priors?
