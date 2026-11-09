@@ -26,6 +26,21 @@ ID_CARD = {v: k for k, v in CARD_ID.items()}
 
 RNG = np.random.default_rng()
 
+# Strategy parameters. PB_PARAMS (JSON) overrides them for local A/B testing only;
+# it is never set in the tournament.
+P = {
+    "open_t": 0.50, "limp_t": 0.42, "open_size": 0.75, "bb_raise_t": 0.60,
+    "pf_reraise_t": 0.62, "pf_call_margin": 0.04,
+    "raise_t": 0.68, "call_margin": 0.03, "bluff_raise": 0.15,
+    "bet_t": 0.58, "bet_base": 0.45, "bet_slope": 1.6, "bluff_scale": 1.0,
+    "disc_w": 0.35,
+}
+try:
+    import os
+    P.update(json.loads(os.environ.get("PB_PARAMS", "{}")))
+except Exception:
+    pass
+
 # ------------------------------------------------------------------ lookup tables
 
 M = 1 << 13
@@ -420,7 +435,7 @@ class Bot:
             w = self.weight_by_action(w, PCT3[v3[:, 0], v3[:, 1], v3[:, 2]], acts.get("preflop"), "preflop")
             kv = keep_values(v3, flop)
             # discard consistency: would our heuristic have discarded od (index 2)?
-            w = w * np.where(np.argmax(kv, 1) == 2, 1.0, 0.35)
+            w = w * np.where(np.argmax(kv, 1) == 2, 1.0, P["disc_w"])
             if acts.get("flop"):
                 w = self.weight_by_action(w, pct_rank(kv.max(1)), acts["flop"], "flop")
         if acts.get("turn") and len(b) >= 4:
@@ -474,24 +489,24 @@ class Bot:
 
         if to_call > 0:
             odds = to_call / (pot + to_call)
-            margin = 0.0 if street == "river" else 0.03
-            if can_raise and E > (0.72 if req["raises_left"] < 3 else 0.68):
+            margin = 0.0 if street == "river" else P["call_margin"]
+            if can_raise and E > P["raise_t"] + (0.04 if req["raises_left"] < 3 else 0.0):
                 return self.act("raise", self.raise_to(req, 0.9 if E > 0.85 else 0.7))
             if E >= odds + margin:
                 return self.act("call")
             # occasional bluff-raise vs folders, with some equity on early streets
-            if can_raise and street != "river" and fold_f > 0.55 and E > 0.25 and rr < 0.15:
+            if can_raise and street != "river" and fold_f > 0.55 and E > 0.25 and rr < P["bluff_raise"]:
                 return self.act("raise", self.raise_to(req, 0.8))
             return self.act("fold") if "fold" in legal else self.act("check")
 
         # not facing a bet
         if not can_raise:
             return self.act("check")
-        thresh = {"flop": 0.58, "turn": 0.6, "river": 0.62}[street]
+        thresh = P["bet_t"] + {"flop": 0.0, "turn": 0.02, "river": 0.04}[street]
         if station:
             thresh -= 0.04
         if E > thresh:
-            frac = 0.45 + (E - thresh) * 1.6
+            frac = P["bet_base"] + (E - thresh) * P["bet_slope"]
             if station:
                 frac *= 1.3
             return self.act("raise", self.raise_to(req, min(1.1, frac)))
@@ -500,7 +515,7 @@ class Bot:
             p = max(0.0, min(0.35, fold_f - 0.35)) if E < 0.25 else 0.0
         else:
             p = max(0.0, min(0.5, fold_f - 0.2)) * (1.0 if E > 0.3 else 0.5)
-        if rr < p:
+        if rr < p * P["bluff_scale"]:
             return self.act("raise", self.raise_to(req, 0.6))
         return self.act("check")
 
@@ -511,7 +526,7 @@ class Bot:
         o = self.opp
         seat = self.seat
         if to_call == 0:  # big blind option after a limp
-            if can_raise and E > 0.6:
+            if can_raise and E > P["bb_raise_t"]:
                 return self.act("raise", self.raise_to(req, 1.0))
             if can_raise and rr < 0.15 and o.pf_fold > 0.5:
                 return self.act("raise", self.raise_to(req, 1.0))
@@ -519,17 +534,17 @@ class Bot:
         odds = to_call / (pot + to_call)
         if seat == "button" and req["my_bet"] == 1 and to_call == 1:
             # first in: open raise wide, limp middling, fold trash
-            open_t = 0.50 - 0.1 * (o.pf_fold - 0.3)
+            open_t = P["open_t"] - 0.1 * (o.pf_fold - 0.3)
             if can_raise and E > open_t:
-                return self.act("raise", self.raise_to(req, 0.75))
-            if E > 0.42:
+                return self.act("raise", self.raise_to(req, P["open_size"]))
+            if E > P["limp_t"]:
                 return self.act("call")
             return self.act("fold")
         # facing a raise
-        reraise_t = 0.62 if req["raises_left"] >= 2 else 0.68
+        reraise_t = P["pf_reraise_t"] + (0.0 if req["raises_left"] >= 2 else 0.06)
         if can_raise and E > reraise_t:
             return self.act("raise", self.raise_to(req, 1.0))
-        if E >= odds + 0.04 or (to_call <= 2 and E > 0.35):
+        if E >= odds + P["pf_call_margin"] or (to_call <= 2 and E > 0.35):
             return self.act("call")
         return self.act("fold")
 
