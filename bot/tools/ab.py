@@ -14,6 +14,9 @@ a = ap.parse_args()
 lo, hi = map(int, a.seeds.split("-"))
 tmp = tempfile.mkdtemp(prefix="pbab_")
 wrapper = os.path.join(tmp, "variant.py")
+import shutil
+snap = os.path.join(tmp, "bot_snapshot.py")  # freeze the bot so edits mid-run don't leak in
+shutil.copy(a.bot, snap); a.bot = snap
 open(wrapper, "w").write(
     "import os, runpy\nos.environ['PB_PARAMS'] = %r\nrunpy.run_path(%r, run_name='__main__')\n"
     % (a.params, os.path.abspath(a.bot)))

@@ -32,8 +32,8 @@ P = {
     "open_t": 0.50, "limp_t": 0.42, "open_size": 0.75, "bb_raise_t": 0.60,
     "pf_reraise_t": 0.62, "pf_call_margin": 0.04,
     "raise_t": 0.68, "call_margin": 0.03, "bluff_raise": 0.15,
-    "bet_t": 0.58, "bet_base": 0.45, "bet_slope": 1.6, "bluff_scale": 1.0,
-    "disc_w": 0.35,
+    "bet_t": 0.58, "bet_base": 0.45, "bet_slope": 1.6, "bluff_scale": 2.5,
+    "disc_w": 0.35, "agg_floor": 0.08,
 }
 try:
     import os
@@ -224,7 +224,7 @@ class OppModel:
             "pf_face_n", "pf_face_fold", "pf_face_raise",
             "po_open_n", "po_open",
             "po_face_n", "po_face_fold", "po_face_raise",
-            "sd_n", "hands")}
+            "sd_n", "agg_sd_n", "agg_sd_weak", "hands")}
 
     def f(self, a, n, prior, w):
         return (self.c[a] + prior * w) / (self.c[n] + w)
@@ -253,6 +253,32 @@ class OppModel:
     @property
     def po_raise(self):
         return self.f("po_face_raise", "po_face_n", 0.12, 8)
+
+    @property
+    def bluff_rate(self):
+        """Share of opponent postflop aggression that turned out weak at showdown."""
+        return self.f("agg_sd_weak", "agg_sd_n", 0.25, 4)
+
+    def learn_showdown(self, msg):
+        opp = msg.get("opp_hole_cards")
+        board = msg.get("board") or []
+        if msg.get("result") != "showdown" or not opp or len(board) != 5:
+            return
+        if not any(h["actor"] == "opp" and h["action"] == "raise" and h["street"] != "preflop"
+                   for h in msg.get("history", [])):
+            return
+        o = np.array([CARD_ID[c] for c in opp]); b = np.array([CARD_ID[c] for c in board])
+        known = [CARD_ID[c] for c in (msg.get("my_hole_cards") or []) + [msg.get("opp_discard")] if c]
+        deck = np.setdiff1d(np.arange(52), np.concatenate([o, b, np.array(known, dtype=int)]))
+        n = 400
+        r = sample_cards(deck, n, 2)
+        bt = np.tile(b, (n, 1))
+        os_ = evaluate(np.concatenate([np.tile(o, (n, 1)), bt], 1))
+        rs = evaluate(np.concatenate([r, bt], 1))
+        eq = float(((os_ > rs) + 0.5 * (os_ == rs)).mean())
+        self.c["agg_sd_n"] += 1
+        if eq < 0.5:
+            self.c["agg_sd_weak"] += 1
 
     def update(self, history):
         self.c["hands"] += 1
@@ -352,10 +378,13 @@ class Bot:
             open_f, face_raise = o.po_agg, o.po_raise
             fold_f = o.po_fold
         nr = acts["raise"]
+        floor = 0.04
+        if street != "preflop":  # learned: how often their aggression is a bluff
+            floor = float(np.clip(P["agg_floor"] * o.bluff_rate / 0.25, 0.02, 0.6))
         if nr >= 2:
-            w = w * soft(pct, 1 - min(open_f, face_raise) * 0.6)
+            w = w * soft(pct, 1 - min(open_f, face_raise) * 0.6, 0.07, floor)
         elif nr == 1:
-            w = w * soft(pct, 1 - max(open_f, face_raise), 0.08)
+            w = w * soft(pct, 1 - max(open_f, face_raise), 0.08, floor)
         elif acts["call"]:
             w = w * soft(pct, fold_f * 0.8, 0.1, 0.1)
             w = w * (1 - 0.35 * soft(pct, 1 - face_raise, 0.05, 0.0))
@@ -605,6 +634,7 @@ class Bot:
                     self.hole = list(msg.get("hole_cards", self.hole))
                 elif t == "hand_result":
                     self.opp.update(msg.get("history", []))
+                    self.opp.learn_showdown(msg)
                 elif t == "init":
                     self.total_hands = msg.get("total_hands", 200)
                     self.time_bank = msg.get("time_bank_ms", 30000)
