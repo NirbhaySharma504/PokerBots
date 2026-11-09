@@ -348,6 +348,8 @@ class Bot:
         self.hand_id = 0
         self.time_bank = 30000
         self.target_ms = 20.0
+        self.panic = False
+        self.lean = False
         self.ms_per_k = 8.0  # pessimistic start; refined online
         self.samples = 0
         self.hole = []
@@ -397,7 +399,7 @@ class Bot:
     def n_samples(self, base):
         # base is the relative weight of this decision; ms_per_k is measured online
         n = self.target_ms / self.ms_per_k * 1000 * base / 2000
-        return int(max(300, min(12000, n)))
+        return int(max(150 if self.lean else 300, min(12000, n)))
 
     def equity_preflop(self, hole, history):
         h = np.array([CARD_ID[c] for c in hole])
@@ -499,7 +501,9 @@ class Bot:
         street = req["street"]
         hist = req.get("history", [])
         hole = self.hole
-        if street == "preflop":
+        if self.panic:
+            E = self.quick_equity(hole, req["board"])
+        elif street == "preflop":
             E = self.timed(self.equity_preflop, hole, hist)
         elif len(hole) == 3:
             E = max(self.timed(self.equity_flop3, hole, req["board"], hist))
@@ -548,7 +552,7 @@ class Bot:
             p = max(0.0, min(0.35, fold_f - 0.35)) if E < 0.25 else 0.0
         else:
             p = max(0.0, min(0.5, fold_f - 0.2)) * (1.0 if E > 0.3 else 0.5)
-        if rr < p * P["bluff_scale"]:
+        if rr < p * P["bluff_scale"] and not self.panic:
             return self.act("raise", self.raise_to(req, 0.6))
         return self.act("check")
 
@@ -593,8 +597,25 @@ class Bot:
             return self.act("call")
         return self.act("fold")
 
+    def quick_equity(self, hole, board):
+        """No-Monte-Carlo fallback used only when the time bank runs low."""
+        h = [CARD_ID[c] for c in hole]
+        if not board:
+            return float(EQ3[h[0], h[1], h[2]])
+        b = [CARD_ID[c] for c in board]
+        if len(h) == 3:
+            kv = keep_values(np.array([h]), np.array([b[:3]]))[0]
+            v = float(kv.max())
+        else:
+            v = float(strength(np.array([h + b]), draws=len(b) < 5)[0])
+        return float(np.interp(v, [0, 1, 1.5, 2, 3, 4, 5], [0.25, 0.42, 0.55, 0.66, 0.78, 0.86, 0.9]))
+
     def choose_discard(self, req):
         hole = req["hole_cards"]
+        if self.panic:
+            kv = keep_values(np.array([[CARD_ID[c] for c in hole]]),
+                             np.array([[CARD_ID[c] for c in req["board"][:3]]]))[0]
+            return {"type": "discard", "card": hole[int(np.argmax(kv))]}
         eqs = self.timed(self.equity_flop3, hole, req["board"], self.cur_history)
         i = int(np.argmax(eqs))
         log(f"h{self.hand_id} discard eqs={[round(e, 3) for e in eqs]} -> {hole[i]}")
@@ -607,6 +628,9 @@ class Bot:
         # spend ~15% of the per-hand share over ~5 decisions: the official box is
         # 1 vCPU and probably several times slower than a dev laptop
         self.target_ms = max(1.0, min(150.0, 0.15 * left / remaining / 5.0))
+        # panic mode: under ~40ms per remaining hand, stop simulating entirely
+        self.panic = left / remaining < 40 or left < 1500 or bool(P.get("force_panic"))
+        self.lean = left / remaining < 90
 
     def timed(self, fn, *args):
         t0 = time.perf_counter()
