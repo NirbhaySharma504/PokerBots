@@ -49,14 +49,19 @@ Submission: `bot/bot.py` (single file, stdlib + numpy only). Deadline 15 Nov 202
 | v4 | read opponent bet sizes when narrowing their range | +900 +-73 (47/1) |
 | v5 | bluff with value-sized bets (hide our own sizing) | +334 +-81 (37/11) |
 | v6 | overbet calling stations with near-nuts, trap frequent bettors | station +1532, v5 +107 +-53 |
+| v7 | Monte Carlo budget 0.15 -> 0.06 of the per-hand share (same strategy, less time) | v6 +87 +-77 |
+| v8 | open ~98% of buttons (open_t 0.35, limp_t 0.30): 3-card equities are compressed, initiative > hand selection | +398 +-103 (36/12) and +303 +-103 (30/18), two machines |
 
 v6 also beats v1 / v2 / v3 / v1_aggro by +700 to +800 each (no rock-paper-scissors).
 
 Tried and rejected (no gain or worse): minimum-defense-frequency calling, fully fixed bet sizing,
-looser calling margins, preflop threshold/size changes, wider steals vs folders, learned
+looser calling margins, small preflop threshold moves (open_t 0.46/0.54 vs v3; the real effect
+only showed up at 0.35, see v8), wider steals vs folders, learned
 discard-style model, river-call self-calibration (shift river bluff-catch equity by how past
 river calls did: tag +31, v7 -69, noise), overbetting the river with near-nuts vs non-stations
-(v7 -243 +-89: size readers just fold).
+(v7 -243 +-89: size readers just fold). On top of v8: opening 100% (-53 +-121), open size 0.5
+(-96 +-134) or 1.0 (+135 +-110, maybe worth more seeds), lower BB 3-bet threshold vs wide openers
+(pf_reraise_t 0.56 / 0.50: -67 / +157 vs a +187 mirror on the same seeds, noise).
 
 ### Pre-submission check (v6)
 - 18/18 wins vs random, check/call, station, maniac, nit, tag, eqbot, polar, lag_eq; 0 notices
