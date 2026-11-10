@@ -54,7 +54,9 @@ v6 also beats v1 / v2 / v3 / v1_aggro by +700 to +800 each (no rock-paper-scisso
 
 Tried and rejected (no gain or worse): minimum-defense-frequency calling, fully fixed bet sizing,
 looser calling margins, preflop threshold/size changes, wider steals vs folders, learned
-discard-style model.
+discard-style model, river-call self-calibration (shift river bluff-catch equity by how past
+river calls did: tag +31, v7 -69, noise), overbetting the river with near-nuts vs non-stations
+(v7 -243 +-89: size readers just fold).
 
 ### Pre-submission check (v6)
 - 18/18 wins vs random, check/call, station, maniac, nit, tag, eqbot, polar, lag_eq; 0 notices
