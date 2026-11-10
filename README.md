@@ -52,6 +52,7 @@ Submission: `bot/bot.py` (single file, stdlib + numpy only). Deadline 15 Nov 202
 | v7 | Monte Carlo budget 0.15 -> 0.06 of the per-hand share (same strategy, less time) | v6 +87 +-77 |
 | v8 | open ~98% of buttons (open_t 0.35, limp_t 0.30): 3-card equities are compressed, initiative > hand selection | +398 +-103 (36/12) and +303 +-103 (30/18), two machines |
 | v9 | call less on flop/turn (call_margin 0.03 -> 0.10) + bluff more (bluff_scale 2.5 -> 4): fold marginal hands that realise badly, take those pots by betting instead | +386 +-100, +430 +-114, +457 +-115 vs v8; stage 2 +642 +-210 |
+| v10 | call_margin 0.10 -> 0.22: flop/turn E vs a betting range runs high, so fold more | +772 +-96 vs v9; vs v9 copies bluffing 1.5x / 2.25x: +1135 / +1271 (0.10: -42 / +18); stage 2 +775 +-190; frozen v6 +1179 (47/1) vs +672 |
 
 v6 also beats v1 / v2 / v3 / v1_aggro by +700 to +800 each (no rock-paper-scissors).
 
