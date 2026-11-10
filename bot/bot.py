@@ -29,7 +29,7 @@ RNG = np.random.default_rng()
 # Strategy parameters. PB_PARAMS (JSON) overrides them for local A/B testing only;
 # it is never set in the tournament.
 P = {
-    "open_t": 0.50, "limp_t": 0.42, "open_size": 0.75, "bb_raise_t": 0.60,
+    "open_t": 0.35, "limp_t": 0.30, "open_size": 0.75, "bb_raise_t": 0.60,
     "pf_reraise_t": 0.62, "pf_call_margin": 0.04,
     "raise_t": 0.68, "call_margin": 0.03, "bluff_raise": 0.3,
     "bet_t": 0.58, "bet_base": 0.45, "bet_slope": 2.4, "bluff_scale": 2.5,
@@ -655,7 +655,9 @@ class Bot:
             return self.act("check")
         odds = to_call / (pot + to_call)
         if seat == "button" and req["my_bet"] == 1 and to_call == 1:
-            # first in: open raise wide, limp middling, fold trash
+            # first in: open almost everything. 3-card equities are compressed (worst hand
+            # ~31% vs random) so initiative is worth more than hand selection; open_t 0.35
+            # opens ~98%, limp/fold only the very bottom (+398 +-103 vs v7, 48 seeds)
             open_t = P["open_t"] - P["steal_k"] * (o.pf_fold - 0.3)
             if can_raise and E > open_t:
                 return self.act("raise", self.raise_to(req, P["open_size"]))
