@@ -33,7 +33,7 @@ P = {
     "pf_reraise_t": 0.62, "pf_call_margin": 0.04,
     "raise_t": 0.68, "call_margin": 0.22, "bluff_raise": 0.3,
     "bet_t": 0.58, "bet_base": 0.45, "bet_slope": 2.4, "bluff_scale": 4,
-    "disc_w": 0.35, "agg_floor": 0.08, "mdf": 0.0, "size_aware": 1, "balanced": 0, "bal_frac": 0.7, "bluff_size": 0.85, "trap_p": 0.4, "steal_k": 0.1, "disc_learn": 0, "prior_k": 1.0, "time_frac": 0.06, "station_cap": 1.6,
+    "disc_w": 0.35, "agg_floor": 0.08, "mdf": 0.0, "size_aware": 1, "balanced": 0, "bal_frac": 0.7, "bluff_size": 0.85, "trap_p": 0.4, "steal_k": 0.1, "disc_learn": 0, "prior_k": 1.0, "time_frac": 0.06, "station_cap": 1.6, "cm_ip": 0.0, "cm_oop": 0.0,
 }
 try:
     import os
@@ -580,7 +580,8 @@ class Bot:
         if to_call > 0:
             odds = to_call / (pot + to_call)
             self.faced[street].append(E)
-            margin = 0.0 if street == "river" else P["call_margin"]
+            margin = 0.0 if street == "river" else (
+                P["call_margin"] + (P["cm_ip"] if self.seat == "button" else P["cm_oop"]))
             if can_raise and E > P["raise_t"] + (0.04 if req["raises_left"] < 3 else 0.0):
                 return self.act("raise", self.raise_to(req, 0.8 if P["balanced"] and not station
                                                        else (0.9 if E > 0.85 else 0.7)))
