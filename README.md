@@ -61,16 +61,26 @@ looser calling margins, small preflop threshold moves (open_t 0.46/0.54 vs v3; t
 only showed up at 0.35, see v8), wider steals vs folders, learned
 discard-style model, river-call self-calibration (shift river bluff-catch equity by how past
 river calls did: tag +31, v7 -69, noise), overbetting the river with near-nuts vs non-stations
-(v7 -243 +-89: size readers just fold). On top of v8: opening 100% (-53 +-121), open size 0.5
+(v7 -243 +-89: size readers just fold). On top of v10 (all within the null-test noise): per-street
+call margins, extra margin out of position (+112 +-79 / -0.06: -405), bluff_scale 3/5, river
+value threshold +-0.08, river bluff frequency / hand strength. On top of v8: opening 100% (-53 +-121), open size 0.5
 (-96 +-134) or 1.0 (+135 +-110, maybe worth more seeds), lower BB 3-bet threshold vs wide openers
 (pf_reraise_t 0.56 / 0.50: -67 / +157 vs a +187 mirror on the same seeds, noise).
 
-### Pre-submission check (v6)
-- 18/18 wins vs random, check/call, station, maniac, nit, tag, eqbot, polar, lag_eq; 0 notices
-- time: <= ~12s of the 30s bank per leg with 7 matches in parallel; ~31s of 75s in stage 2
-- 4 parallel matches pinned to efficiency cores: all finish, max 14.7s per leg
+### How much to trust an A/B number
+Null tests (identical bots through `tools/ab.py`): +202 +-83, -171 +-64, -49 +-96 (same seeds as
+the first), +8 +-55. The spread of those means is about 2x the reported SE, so a single run under
+~3 SE is noise. Promote only what replicates on independent seed sets and on both machines (v8,
+v9, v10 each did, at +300 to +900 per run).
+
+### Pre-submission check (v10, current main)
+- all wins vs random, check/call, station, maniac, nit, tag, eqbot, polar, lag_eq, sizer, jammer,
+  minraiser (both machines, 0 notices); smallest margin nit ~+900
+- 4 parallel matches pinned to efficiency cores: all finish, ~12s of the 30s bank per leg
+  (engine "time used" is summed over both legs); stage 2 ~16s of 75s per leg
 - lean / panic modes driven by engine-reported `time_left_ms`; start-up 0.19s, ~40MB
 - protocol fuzz: unknown types/fields, malformed lines, notices -> ignored; exits on match_end
+- evaluator: 0 mismatches vs engine; numpy 1.24 / 1.26 / 2.x give identical tables
 
 ### Open ideas
 - [ ] a stronger, independent size-reading opponent to test v5/v6 sizing against
