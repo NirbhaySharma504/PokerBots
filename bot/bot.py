@@ -31,8 +31,8 @@ RNG = np.random.default_rng()
 P = {
     "open_t": 0.35, "limp_t": 0.30, "open_size": 0.75, "bb_raise_t": 0.60,
     "pf_reraise_t": 0.62, "pf_call_margin": 0.04,
-    "raise_t": 0.68, "call_margin": 0.03, "bluff_raise": 0.3,
-    "bet_t": 0.58, "bet_base": 0.45, "bet_slope": 2.4, "bluff_scale": 2.5,
+    "raise_t": 0.68, "call_margin": 0.10, "bluff_raise": 0.3,
+    "bet_t": 0.58, "bet_base": 0.45, "bet_slope": 2.4, "bluff_scale": 4,
     "disc_w": 0.35, "agg_floor": 0.08, "mdf": 0.0, "size_aware": 1, "balanced": 0, "bal_frac": 0.7, "bluff_size": 0.85, "trap_p": 0.4, "steal_k": 0.1, "disc_learn": 0, "prior_k": 1.0, "time_frac": 0.06, "station_cap": 1.6,
 }
 try:
