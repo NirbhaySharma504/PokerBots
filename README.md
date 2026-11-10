@@ -66,7 +66,7 @@ river calls did: tag +31, v7 -69, noise), overbetting the river with near-nuts v
 call margins, bluff_scale 3/5, river value threshold +-0.08, river bluff frequency / hand
 strength. (Extra margin out of position looked like noise in one run, +112 +-79, but replicated
 on 8 more runs and became v11.) On top of v11: OOP bluff frequency x0.5 (-151) / x1.6 (+38),
-OOP value-bet threshold +0.06 (-98) / -0.06 (-146). On top of v8: opening 100% (-53 +-121), open size 0.5
+OOP value-bet threshold +0.06 (-98) / -0.06 (-146). BB preflop call margin 0.10 (-16, +7) / 0.0 (+16, -115). On top of v8: opening 100% (-53 +-121), open size 0.5
 (-96 +-134) or 1.0 (+135 +-110, maybe worth more seeds), lower BB 3-bet threshold vs wide openers
 (pf_reraise_t 0.56 / 0.50: -67 / +157 vs a +187 mirror on the same seeds, noise).
 
