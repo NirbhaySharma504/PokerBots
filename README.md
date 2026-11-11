@@ -71,6 +71,10 @@ on 8 more runs and became v11.) On top of v11: OOP bluff frequency x0.5 (-151) /
 OOP value-bet threshold +0.06 (-98) / -0.06 (-146). BB preflop call margin 0.10 (-16, +7) / 0.0 (+16, -115). On top of v8: opening 100% (-53 +-121), open size 0.5
 (-96 +-134) or 1.0 (+135 +-110, maybe worth more seeds), lower BB 3-bet threshold vs wide openers
 (pf_reraise_t 0.56 / 0.50: -67 / +157 vs a +187 mirror on the same seeds, noise).
+On top of v13: call_margin 0.28 (+129 fresh, nasty -865), multiplicative realization
+(call when R*E >= odds; R .55/.42: +138 vs v13 but nasty -684, bigbet -398) and a hybrid
+min(flat, R) margin (-56 / -102 vs v13); river bluff/value thresholds and sizes; tiny-bet probes
+(v13 beats minbettor +3202, ties tiny13).
 
 ### How much to trust an A/B number
 Null tests (identical bots through `tools/ab.py`): +202 +-83, -171 +-64, -49 +-96 (same seeds as
