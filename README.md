@@ -54,6 +54,7 @@ Submission: `bot/bot.py` (single file, stdlib + numpy only). Deadline 15 Nov 202
 | v9 | call less on flop/turn (call_margin 0.03 -> 0.10) + bluff more (bluff_scale 2.5 -> 4): fold marginal hands that realise badly, take those pots by betting instead | +386 +-100, +430 +-114, +457 +-115 vs v8; stage 2 +642 +-210 |
 | v10 | call_margin 0.10 -> 0.22: flop/turn E vs a betting range runs high, so fold more | +772 +-96 vs v9; vs v9 copies bluffing 1.5x / 2.25x: +1135 / +1271 (0.10: -42 / +18); stage 2 +775 +-190; frozen v6 +1179 (47/1) vs +672 |
 | v11 | extra flop/turn call margin out of position (cm_oop 0.12, so 0.34 OOP / 0.22 IP): OOP calls realise even less | vs v10: +373 / +483 (0.08), +448 (0.12), +553 (0.16) on A; +472 / +193 (0.10), +361 / +500 (0.16) on N; control cm_oop -0.10: -441; vs vbluff6 +1397 vs +1230, v6 +1387 vs +1185; gauntlet 72/72 |
+| v12 | small-ball: bet whenever checked to (bluff_scale 30), bluffs 1/3 pot (bluff_size 0.33), value 0.45 pot + flat slope (bet_slope 0.5): one small size, so v11-style folders over-fold | vs v11: +511, +608 / +544 (value 0.30 / 0.45), +585 (48 seeds each, all fresh); stage 2 +1118 (15/1); vs a nasty v11 copy (small-ball + wide 3bets + bluff-raises) -16 vs -313 for v11; tag +1629 vs +1897; gauntlet 36/36 |
 
 v6 also beats v1 / v2 / v3 / v1_aggro by +700 to +800 each (no rock-paper-scissors).
 
