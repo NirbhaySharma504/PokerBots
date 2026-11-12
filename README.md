@@ -83,6 +83,16 @@ hedge vs table-based bots but nothing measurable vs ours, so left out); mixing c
 (-64 / -178 vs v13); switching whole styles mid-match by which is winning (v13 vs a "call more"
 style in 20-hand blocks): maniac +2.3k, tag +0.2k but nasty -0.5k and v13 -363 (7/21), since
 exploring costs too much against strong bots in a 200-hand leg.
+On top of v14-v16 (all noise or worse, so not adopted): river table with a 1.5 pot overbet
+(+106 / +27 vs v14, pool ~+60), the same one-street table on the turn (-283, the turn wants the
+range bet), 40 buckets instead of 20 (+58), call margin scaled by SPR after calling (-151 to
+-294: their big bets are just strong), opponent-model decay vs a style switcher (v15 already
++2722 vs it; decay +18 / -4 vs v15), tiny-bet cutoff 0.4 / 0.5 (+19 / +110 then +25; the 1/3 pot
+lead stays above it), bigger value bets bet_base 0.55 / 0.62 (-165 / -128), wider BB 3-bets
+pf_reraise_t 0.50 / 0.45 (+103 then +21 / +2). Two random-copy hunts (28 v16 copies with 4-6
+random knobs) found nothing that beats v16: the closest, s15, was +3 as hero on 48 seeds.
+v16 vs every bot in opponents/ at real stage 2 (1000 hands): all 12/0 except our own copies
+(tiny13 9/3 before v16, v13 7/5).
 
 ### How much to trust an A/B number
 Null tests (identical bots through `tools/ab.py`): +202 +-83, -171 +-64, -49 +-96 (same seeds as
