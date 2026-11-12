@@ -95,7 +95,7 @@ v16 vs every bot in opponents/ at real stage 2 (1000 hands): all 12/0 except our
 (tiny13 9/3 before v16, v13 7/5). River calls after we check / vs a check-raise win only 8-19% at showdown vs our
 copies, but a river margin there (0.2 / 0.3) is +155 / +115 / +67 and +126 vs v16 while costing
 ~-100 / -65 on average vs nasty/barrel/bigbet/xr16/tag/maniac (tag -270, maniac -222): copies
-rarely bluff there, real bluffers do. Not adopted.
+rarely bluff there, real bluffers do. Not adopted. Scaling it by the learned bluff_rate (full below 10%, zero above 20%): +35 vs v16, maniac -413, tag -163; the signal is too slow within a leg.
 
 ### How much to trust an A/B number
 Null tests (identical bots through `tools/ab.py`): +202 +-83, -171 +-64, -49 +-96 (same seeds as
