@@ -33,7 +33,7 @@ P = {
     "pf_reraise_t": 0.62, "pf_call_margin": 0.04,
     "raise_t": 0.68, "call_margin": 0.22, "bluff_raise": 0.3,
     "bet_t": 0.58, "bet_base": 0.45, "bet_slope": 0.5, "bluff_scale": 30,
-    "disc_w": 0.35, "agg_floor": 0.08, "mdf": 0.0, "size_aware": 1, "balanced": 0, "bal_frac": 0.7, "bluff_size": 0.33, "trap_p": 1.0, "steal_k": 0.1, "disc_learn": 0, "prior_k": 1.0, "time_frac": 0.06, "station_cap": 1.6, "cm_ip": 0.0, "cm_oop": 0.12,
+    "disc_w": 0.35, "agg_floor": 0.08, "mdf": 0.0, "size_aware": 1, "balanced": 0, "bal_frac": 0.7, "bluff_size": 0.33, "trap_p": 1.0, "river_gto": 1, "steal_k": 0.1, "disc_learn": 0, "prior_k": 1.0, "time_frac": 0.06, "station_cap": 1.6, "cm_ip": 0.0, "cm_oop": 0.12,
 }
 try:
     import os
@@ -375,6 +375,15 @@ def pct_rank(x):
 
 # ------------------------------------------------------------------ the bot
 
+# River betting from a solved toy game: CFR+ on a one-street game where both players hold a
+# uniform strength bucket (20 buckets), pot 1, bets 1/3 or 3/4 pot, pot-size raises, then
+# fold/call (scratch solver, exploitability < 1e-4 pot). Only the two betting spots are used:
+# OOP first to act (bet 1/3, bet 3/4, check) and IP checked to (check, bet 1/3, bet 3/4).
+# Rows = our equity vs their pre-river range. Facing bets stays exploitative (it adapts).
+RIVER_ROOT = [(0.48, 0.21, 0.32), (0.52, 0.18, 0.31), (0.00, 0.00, 1.00), (0.00, 0.00, 1.00), (0.00, 0.00, 1.00), (0.00, 0.00, 1.00), (0.00, 0.00, 1.00), (0.00, 0.00, 1.00), (0.00, 0.00, 1.00), (0.00, 0.00, 1.00), (0.00, 0.00, 1.00), (0.00, 0.00, 1.00), (1.00, 0.00, 0.00), (1.00, 0.00, 0.00), (1.00, 0.00, 0.00), (0.00, 0.09, 0.91), (0.00, 0.26, 0.74), (0.00, 0.33, 0.67), (1.00, 0.00, 0.00), (0.00, 0.22, 0.78)]
+RIVER_X = [(0.00, 0.33, 0.67), (0.00, 0.33, 0.67), (0.32, 0.28, 0.40), (1.00, 0.00, 0.00), (1.00, 0.00, 0.00), (1.00, 0.00, 0.00), (1.00, 0.00, 0.00), (1.00, 0.00, 0.00), (1.00, 0.00, 0.00), (1.00, 0.00, 0.00), (1.00, 0.00, 0.00), (1.00, 0.00, 0.00), (0.05, 0.95, 0.00), (0.03, 0.97, 0.00), (0.04, 0.96, 0.00), (0.00, 0.00, 1.00), (0.00, 0.00, 1.00), (0.00, 0.00, 1.00), (0.00, 0.96, 0.04), (0.00, 0.00, 1.00)]
+
+
 class Bot:
     def __init__(self):
         self.opp = OppModel()
@@ -493,7 +502,7 @@ class Bot:
             eqs.append(float((w * win).sum() / w.sum()))
         return eqs
 
-    def equity_post(self, hole, board, history):
+    def equity_post(self, hole, board, history, skip_river=False):
         """Hero holds 2 cards after the discard (turn / river, or all-in flop)."""
         h = np.array([CARD_ID[c] for c in hole])
         b = np.array([CARD_ID[c] for c in board])
@@ -529,7 +538,7 @@ class Bot:
         if acts.get("turn") and len(b) >= 4:
             st = strength(np.concatenate([v2, full[:, :4]], 1))
             w = self.weight_by_action(w, pct_rank(st), acts["turn"], "turn")
-        if acts.get("river") and len(b) == 5:
+        if acts.get("river") and len(b) == 5 and not skip_river:
             st = strength(np.concatenate([v2, full], 1), draws=False)
             w = self.weight_by_action(w, pct_rank(st), acts["river"], "river")
         hs = evaluate(np.concatenate([np.tile(h, (N, 1)), full], 1))
@@ -597,6 +606,10 @@ class Bot:
         # not facing a bet
         if not can_raise:
             return self.act("check")
+        if street == "river" and P["river_gto"] and not station and not self.panic:
+            r = self.river_bet(req, hist)
+            if r:
+                return r
         thresh = P["bet_t"] + {"flop": 0.0, "turn": 0.02, "river": 0.04}[street]
         if station:
             thresh -= 0.04
@@ -623,6 +636,21 @@ class Bot:
             size = self.bal_size(rr) if P["balanced"] else P["bluff_size"] + 0.2 * (random.random() - 0.5)
             return self.act("raise", self.raise_to(req, size))
         return self.act("check")
+
+    def river_bet(self, req, hist):
+        """First river action (OOP) or checked to (IP): sample from the solved table."""
+        seq = [act for st, actor, act, r, _ in replay(hist) if st == "river"]
+        oop = self.seat != "button"
+        if oop and not seq:
+            table, acts = RIVER_ROOT, (0.33, 0.75, 0)
+        elif not oop and seq == ["check"]:
+            table, acts = RIVER_X, (0, 0.33, 0.75)
+        else:
+            return None
+        E = self.timed(self.equity_post, self.hole, req["board"], hist, True)
+        size = random.choices(acts, weights=table[min(19, int(E * 20))])[0]
+        log(f"h{self.hand_id} river table E={E:.2f} -> {size}")
+        return self.act("raise", self.raise_to(req, size)) if size else self.act("check")
 
     @staticmethod
     def bal_size(rr):
