@@ -591,9 +591,9 @@ class Bot:
             self.faced[street].append(E)
             margin = 0.0 if street == "river" else (
                 P["call_margin"] + (P["cm_ip"] if self.seat == "button" else P["cm_oop"]))
-            # vs tiny bets (under cm_size of the pot) shrink the margin in proportion: a flat
+            # vs tiny bets (under cm_size of the pot) shrink the margin quadratically: a flat
             # +0.22/0.34 equity margin vs a 1/8 pot bet folds hands with ~40% equity
-            margin *= min(1.0, to_call / max(1, pot - to_call) / P["cm_size"])
+            margin *= min(1.0, to_call / max(1, pot - to_call) / P["cm_size"]) ** 2
             if can_raise and E > P["raise_t"] + (0.04 if req["raises_left"] < 3 else 0.0):
                 return self.act("raise", self.raise_to(req, 0.8 if P["balanced"] and not station
                                                        else (0.9 if E > 0.85 else 0.7)))
