@@ -88,14 +88,14 @@ the first), +8 +-55. The spread of those means is about 2x the reported SE, so a
 ~3 SE is noise. Promote only what replicates on independent seed sets and on both machines (v8,
 v9, v10 each did, at +300 to +900 per run).
 
-### Pre-submission check (v10, current main)
-- all wins vs random, check/call, station, maniac, nit, tag, eqbot, polar, lag_eq, sizer, jammer,
-  minraiser (both machines, 0 notices); smallest margin nit ~+900
-- 4 parallel matches pinned to efficiency cores: all finish, ~12s of the 30s bank per leg
-  (engine "time used" is summed over both legs); stage 2 ~16s of 75s per leg
-- lean / panic modes driven by engine-reported `time_left_ms`; start-up 0.19s, ~40MB
-- protocol fuzz: unknown types/fields, malformed lines, notices -> ignored; exits on match_end
-- evaluator: 0 mismatches vs engine; numpy 1.24 / 1.26 / 2.x give identical tables
+### Pre-submission check (v14, current main)
+- all wins vs every bot in `opponents/` (both machines, 0 notices)
+- 8 parallel matches pinned to efficiency cores vs station: max ~17.6s of the 30s bank per leg;
+  real stage 2 (1000 hands), 4 parallel: ~31s of 75s per leg (engine "time used" sums both legs)
+- `tools/fuzz.py`: garbage / non-object JSON, unknown types, extra or missing fields, notices,
+  no init, tiny time bank, all-in-only and check-only spots -> one legal reply each, clean exit
+- start-up + first reply 0.18s, peak memory ~39MB; evaluator 0 mismatches vs engine
+- lean / panic modes driven by engine-reported `time_left_ms`
 
 ### Open ideas
 - [ ] a stronger, independent size-reading opponent to test v5/v6 sizing against
