@@ -107,7 +107,7 @@ of 75, 0 notices. A random hero search (16 v16 variants, 3 knob moves each) foun
 ### How much to trust an A/B number
 Null tests (identical bots through `tools/ab.py`): +202 +-83, -171 +-64, -49 +-96 (same seeds as
 the first), +8 +-55. The spread of those means is about 2x the reported SE, so a single run under
-~3 SE is noise. Promote only what replicates on independent seed sets and on both machines (v8,
+~3 SE is noise. v16 null tests (3 x 48 seeds): -18 +-62, +13 +-55, -9 +-55, so for v16 the spread is within the printed SE. Promote only what replicates on independent seed sets and on both machines (v8,
 v9, v10 each did, at +300 to +900 per run).
 
 ### Pre-submission check (v14, current main)
