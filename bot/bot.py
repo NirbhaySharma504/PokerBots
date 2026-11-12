@@ -769,6 +769,8 @@ class Bot:
                 msg = json.loads(line)
             except ValueError:
                 continue
+            if not isinstance(msg, dict):  # valid JSON but not a message (e.g. [] or 42)
+                continue
             t = msg.get("type")
             reply = None
             try:
