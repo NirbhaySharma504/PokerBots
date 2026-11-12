@@ -75,6 +75,11 @@ On top of v13: call_margin 0.28 (+129 fresh, nasty -865), multiplicative realiza
 (call when R*E >= odds; R .55/.42: +138 vs v13 but nasty -684, bigbet -398) and a hybrid
 min(flat, R) margin (-56 / -102 vs v13); river bluff/value thresholds and sizes; tiny-bet probes
 (v13 beats minbettor +3202, ties tiny13).
+Also on v13: off-grid bet sizes 0.6x/1.4x on 30% of bets (+14 vs v13, pool unchanged: a free
+hedge vs table-based bots but nothing measurable vs ours, so left out); mixing close discards
+(-64 / -178 vs v13); switching whole styles mid-match by which is winning (v13 vs a "call more"
+style in 20-hand blocks): maniac +2.3k, tag +0.2k but nasty -0.5k and v13 -363 (7/21), since
+exploring costs too much against strong bots in a 200-hand leg.
 
 ### How much to trust an A/B number
 Null tests (identical bots through `tools/ab.py`): +202 +-83, -171 +-64, -49 +-96 (same seeds as
