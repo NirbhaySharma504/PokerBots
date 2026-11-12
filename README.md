@@ -92,7 +92,10 @@ lead stays above it), bigger value bets bet_base 0.55 / 0.62 (-165 / -128), wide
 pf_reraise_t 0.50 / 0.45 (+103 then +21 / +2). Two random-copy hunts (28 v16 copies with 4-6
 random knobs) found nothing that beats v16: the closest, s15, was +3 as hero on 48 seeds.
 v16 vs every bot in opponents/ at real stage 2 (1000 hands): all 12/0 except our own copies
-(tiny13 9/3 before v16, v13 7/5).
+(tiny13 9/3 before v16, v13 7/5). River calls after we check / vs a check-raise win only 8-19% at showdown vs our
+copies, but a river margin there (0.2 / 0.3) is +155 / +115 / +67 and +126 vs v16 while costing
+~-100 / -65 on average vs nasty/barrel/bigbet/xr16/tag/maniac (tag -270, maniac -222): copies
+rarely bluff there, real bluffers do. Not adopted.
 
 ### How much to trust an A/B number
 Null tests (identical bots through `tools/ab.py`): +202 +-83, -171 +-64, -49 +-96 (same seeds as
