@@ -97,6 +97,13 @@ copies, but a river margin there (0.2 / 0.3) is +155 / +115 / +67 and +126 vs v1
 ~-100 / -65 on average vs nasty/barrel/bigbet/xr16/tag/maniac (tag -270, maniac -222): copies
 rarely bluff there, real bluffers do. Not adopted. Scaling it by the learned bluff_rate (full below 10%, zero above 20%): +35 vs v16, maniac -413, tag -163; the signal is too slow within a leg. Flop/turn margin when facing a raise after our own bet: x0.5 / x0 lose -1000 / -1900 vs v16 and the raisers (their raises are strong); x1.3 / x1.6 win vs v16 (+193 / +304) but lose vs raiser16 (-181 / -605) and xr16: self-play trap both ways, so x1 stays.
 
+### Final check (v16, real stage 2: 1000 hands, 2 x 500, seeds 11701-11712)
+v16 vs all 26 bots in opponents/ (+ v13, v6): 300 of 312 matches won. 21 opponents 12/0
+(+1990 bigbet to +15926 maniac); threebet 11/1, raiser16 11/1, tiny13 10/2; the only close ones
+are near-copies of v16 itself: xr16 +330 (6/6), v13 +196 (7/5). Max 33s of the 75s bank per leg.
+Squeeze (taskpolicy -b, vs station): stage 1 8 at once ~16.7s/leg of 30, stage 2 4 at once ~29s/leg
+of 75, 0 notices. A random hero search (16 v16 variants, 3 knob moves each) found nothing above noise.
+
 ### How much to trust an A/B number
 Null tests (identical bots through `tools/ab.py`): +202 +-83, -171 +-64, -49 +-96 (same seeds as
 the first), +8 +-55. The spread of those means is about 2x the reported SE, so a single run under
