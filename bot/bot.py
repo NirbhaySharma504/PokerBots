@@ -557,7 +557,9 @@ class Bot:
     def raise_to(self, req, frac):
         target = req["opp_bet"] + frac * (req["pot"] + req["to_call"])
         target = int(round(max(req["min_raise"], min(req["max_raise"], target))))
-        if target >= 0.6 * req["max_raise"] + 0.4 * req["my_bet"]:
+        # only round up to all-in when the raise is already most of the stack: jamming at 60% put
+        # whole stacks in with hands that wanted a big-but-not-all-in raise (+164 / +198 vs v16)
+        if target >= 0.85 * req["max_raise"] + 0.15 * req["my_bet"]:
             target = req["max_raise"]
         return target
 
