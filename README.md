@@ -103,6 +103,9 @@ v16 vs all 26 bots in opponents/ (+ v13, v6): 300 of 312 matches won. 21 opponen
 are near-copies of v16 itself: xr16 +330 (6/6), v13 +196 (7/5). Max 33s of the 75s bank per leg.
 Squeeze (taskpolicy -b, vs station): stage 1 8 at once ~16.7s/leg of 30, stage 2 4 at once ~29s/leg
 of 75, 0 notices. A random hero search (16 v16 variants, 3 knob moves each) found nothing above noise.
+Extremes of the untuned knobs (open_size, bb_raise_t, bluff_raise, disc_w, agg_floor, steal_k,
+prior_k, station_cap, pf_call_margin; 48 seeds each): best three (agg_floor .16, steal_k 0, prior_k 2,
++108..+121) fell to +13..+34 +-43 on 96 fresh seeds, combo +16. open_size 1.0 -185, bluff_raise .6 -140.
 
 ### How much to trust an A/B number
 Null tests (identical bots through `tools/ab.py`): +202 +-83, -171 +-64, -49 +-96 (same seeds as
