@@ -119,6 +119,9 @@ lose vs v16 too, so the signal has no baseline).
 v18 sizing probes (48 seeds vs v18, 14701-14748): preflop 3-bet size .6 / 1.6 pot: -76 / +23; BB raise after a limp
 .6 / 1.6: -105 / -29; value-bet cap .8 / 1.6: +23 / -124. Pot-sized stays. Squeeze (16 at once, taskpolicy -b, vs
 station): v18 max 56.7s of 60, time_frac .03 57.2s (the adaptive budget fills the bank either way), 16/16 both.
+Only our bot slowed (taskpolicy -b wrapper, 16 at once) vs full-speed v16, 14801-14832: slow v16 -97 +-84, slow v18
++164 +-89 (no collapse, so a mild slowdown alone doesn't explain the outside 5/60). v18 real stage 2 vs v16
+(14901-14916): +351 +-137 (12/4), max 34.9s of 75; pool 14921-14928 all positive, every opponent won on average.
 
 ### How much to trust an A/B number
 Null tests (identical bots through `tools/ab.py`): +202 +-83, -171 +-64, -49 +-96 (same seeds as
