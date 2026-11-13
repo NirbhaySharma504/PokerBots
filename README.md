@@ -95,7 +95,7 @@ v16 vs every bot in opponents/ at real stage 2 (1000 hands): all 12/0 except our
 (tiny13 9/3 before v16, v13 7/5). River calls after we check / vs a check-raise win only 8-19% at showdown vs our
 copies, but a river margin there (0.2 / 0.3) is +155 / +115 / +67 and +126 vs v16 while costing
 ~-100 / -65 on average vs nasty/barrel/bigbet/xr16/tag/maniac (tag -270, maniac -222): copies
-rarely bluff there, real bluffers do. Not adopted. Scaling it by the learned bluff_rate (full below 10%, zero above 20%): +35 vs v16, maniac -413, tag -163; the signal is too slow within a leg. Flop/turn margin when facing a raise after our own bet: x0.5 / x0 lose -1000 / -1900 vs v16 and the raisers (their raises are strong); x1.3 / x1.6 win vs v16 (+193 / +304) but lose vs raiser16 (-181 / -605) and xr16: self-play trap both ways, so x1 stays.
+rarely bluff there, real bluffers do. Not adopted. Scaling it by the learned bluff_rate (full below 10%, zero above 20%): +35 vs v16, maniac -413, tag -163; the signal is too slow within a leg. Flop/turn margin when facing a raise after our own bet: x0.5 / x0 lose -1000 / -1900 vs v16 and the raisers (their raises are strong); x1.3 / x1.6 win vs v16 (+193 / +304) but lose vs raiser16 (-181 / -605) and xr16: self-play trap both ways, so x1 stays. Two-street (turn+river) CFR table for the turn betting spots (tools/turn_cfr.py on branch aaryan/turn-table; 10 buckets, transitions simulated on real boards): first pool looked good (+150 avg, xr16 +199) but vs v16 -65 then -104 +-45 on 96 fresh, and a wider pool went -75 to -297 on 7 of 8. Not adopted.
 
 ### Final check (v16, real stage 2: 1000 hands, 2 x 500, seeds 11701-11712)
 v16 vs all 26 bots in opponents/ (+ v13, v6): 300 of 312 matches won. 21 opponents 12/0
