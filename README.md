@@ -106,6 +106,14 @@ of 75, 0 notices. A random hero search (16 v16 variants, 3 knob moves each) foun
 Extremes of the untuned knobs (open_size, bb_raise_t, bluff_raise, disc_w, agg_floor, steal_k,
 prior_k, station_cap, pf_call_margin; 48 seeds each): best three (agg_floor .16, steal_k 0, prior_k 2,
 +108..+121) fell to +13..+34 +-43 on 96 fresh seeds, combo +16. open_size 1.0 -185, bluff_raise .6 -140.
+Also flat or worse (48 seeds vs v16): time_frac .03 -5 / .12 -75 (sample count is not a bottleneck), mdf .5 -1395,
+balanced -625, size_aware 0 -142, disc_learn -15; range-reading constants (raise width .3/.9, call cut .4/1.0,
+call cap 0/.7, check cap .2/.8) best +105 = noise level.
+Outside team's suggestion (bluff_scale 1, call_margin .08, cm_oop .04, mdf 1; they measured +304 vs their bot,
+which still beats it ~4 in 5): -829 vs v16 and loses to barrel/bigbet/xr16, though much better vs
+checkraiser/maniac/tag. bluff_scale 1 alone -280, 5 -103; calling part alone -888. Bluff threshold raised by opp
+raise rate: -113 / -358. Cutting bluffs when our bluff hands net < 0 in-match: -306 (bluff hands are weak hands, they
+lose vs v16 too, so the signal has no baseline).
 
 ### How much to trust an A/B number
 Null tests (identical bots through `tools/ab.py`): +202 +-83, -171 +-64, -49 +-96 (same seeds as
