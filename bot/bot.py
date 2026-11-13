@@ -33,7 +33,7 @@ P = {
     "pf_reraise_t": 0.62, "pf_call_margin": 0.04,
     "raise_t": 0.68, "call_margin": 0.22, "bluff_raise": 0.3,
     "bet_t": 0.58, "bet_base": 0.45, "bet_slope": 0.5, "bluff_scale": 30,
-    "disc_w": 0.35, "agg_floor": 0.08, "mdf": 0.0, "size_aware": 1, "balanced": 0, "bal_frac": 0.7, "bluff_size": 0.33, "trap_p": 1.0, "river_gto": 1, "steal_k": 0.1, "disc_learn": 0, "prior_k": 1.0, "time_frac": 0.06, "station_cap": 1.6, "cm_ip": 0.0, "cm_oop": 0.12, "cm_size": 0.3,
+    "disc_w": 0.35, "agg_floor": 0.08, "mdf": 0.0, "size_aware": 1, "balanced": 0, "bal_frac": 0.7, "bluff_size": 0.33, "trap_p": 1.0, "river_gto": 1, "steal_k": 0.1, "disc_learn": 0, "prior_k": 1.0, "time_frac": 0.06, "station_cap": 1.6, "cm_ip": 0.0, "cm_oop": 0.12, "cm_size": 0.3, "mini_n": 300,
 }
 try:
     import os
@@ -392,6 +392,7 @@ class Bot:
         self.time_bank = 30000
         self.target_ms = 20.0
         self.panic = False
+        self.emergency = False
         self.lean = False
         self.mult = 1.0
         self.cost_ema = None
@@ -454,6 +455,8 @@ class Bot:
     # --------------------------------------------------- equity engines
     def n_samples(self, base):
         # base is the relative weight of this decision; ms_per_k is measured online
+        if self.panic:  # short on time: a small Monte Carlo still beats the no-MC heuristic by a lot
+            return P["mini_n"]
         n = self.target_ms / self.ms_per_k * 1000 * base / 2000
         return int(max(150 if self.lean else 300, min(12000, n)))
 
@@ -568,7 +571,7 @@ class Bot:
         street = req["street"]
         hist = req.get("history", [])
         hole = self.hole
-        if self.panic:
+        if self.emergency:
             E = self.quick_equity(hole, req["board"])
         elif street == "preflop":
             E = self.timed(self.equity_preflop, hole, hist)
@@ -611,7 +614,7 @@ class Bot:
         # not facing a bet
         if not can_raise:
             return self.act("check")
-        if street == "river" and P["river_gto"] and not station and not self.panic:
+        if street == "river" and P["river_gto"] and not station and not self.emergency:
             r = self.river_bet(req, hist)
             if r:
                 return r
@@ -637,7 +640,7 @@ class Bot:
             p = max(0.0, min(0.35, fold_f - 0.35)) if E < 0.25 else 0.0
         else:
             p = max(0.0, min(0.5, fold_f - 0.2)) * (1.0 if E > 0.3 else 0.5)
-        if rr < p * P["bluff_scale"] and not self.panic:
+        if rr < p * P["bluff_scale"] and not self.emergency:
             size = self.bal_size(rr) if P["balanced"] else P["bluff_size"] + 0.2 * (random.random() - 0.5)
             return self.act("raise", self.raise_to(req, size))
         return self.act("check")
@@ -721,7 +724,7 @@ class Bot:
 
     def choose_discard(self, req):
         hole = req["hole_cards"]
-        if self.panic:
+        if self.emergency:
             kv = keep_values(np.array([[CARD_ID[c] for c in hole]]),
                              np.array([[CARD_ID[c] for c in req["board"][:3]]]))[0]
             return {"type": "discard", "card": hole[int(np.argmax(kv))]}
@@ -753,6 +756,10 @@ class Bot:
         self.lean = share < 90 or self.mult < 0.4
         self.panic = (share < 40 or left < 1500 or (c is not None and c > 0.8 * share)
                       or bool(P.get("force_panic")))
+        # running slow (cost over budget) or nearly out: no MC at all, like before. Only a plain
+        # shortage of ms per hand gets the small MC (300 samples plays at full strength).
+        self.emergency = (left < 1500 or share < 15 or (c is not None and c > 0.8 * share)
+                          or bool(P.get("force_emergency")))
 
     def timed(self, fn, *args):
         t0 = time.perf_counter()
