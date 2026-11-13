@@ -33,7 +33,7 @@ P = {
     "pf_reraise_t": 0.62, "pf_call_margin": 0.04,
     "raise_t": 0.68, "call_margin": 0.22, "bluff_raise": 0.3,
     "bet_t": 0.58, "bet_base": 0.45, "bet_slope": 0.5, "bluff_scale": 30,
-    "disc_w": 0.35, "agg_floor": 0.08, "mdf": 0.0, "size_aware": 1, "balanced": 0, "bal_frac": 0.7, "bluff_size": 0.33, "trap_p": 1.0, "river_gto": 1, "steal_k": 0.1, "disc_learn": 0, "prior_k": 1.0, "time_frac": 0.06, "station_cap": 1.6, "cm_ip": 0.0, "cm_oop": 0.12, "cm_size": 0.3,
+    "disc_w": 0.35, "agg_floor": 0.08, "mdf": 0.0, "size_aware": 1, "balanced": 0, "bal_frac": 0.7, "bluff_size": 0.33, "trap_p": 1.0, "river_gto": 1, "turn_gto": 1, "steal_k": 0.1, "disc_learn": 0, "prior_k": 1.0, "time_frac": 0.06, "station_cap": 1.6, "cm_ip": 0.0, "cm_oop": 0.12, "cm_size": 0.3,
 }
 try:
     import os
@@ -381,6 +381,8 @@ def pct_rank(x):
 # OOP first to act (bet 1/3, bet 3/4, check) and IP checked to (check, bet 1/3, bet 3/4).
 # Rows = our equity vs their pre-river range. Facing bets stays exploitative (it adapts).
 RIVER_ROOT = [(0.48, 0.21, 0.32), (0.52, 0.18, 0.31), (0.00, 0.00, 1.00), (0.00, 0.00, 1.00), (0.00, 0.00, 1.00), (0.00, 0.00, 1.00), (0.00, 0.00, 1.00), (0.00, 0.00, 1.00), (0.00, 0.00, 1.00), (0.00, 0.00, 1.00), (0.00, 0.00, 1.00), (0.00, 0.00, 1.00), (1.00, 0.00, 0.00), (1.00, 0.00, 0.00), (1.00, 0.00, 0.00), (0.00, 0.09, 0.91), (0.00, 0.26, 0.74), (0.00, 0.33, 0.67), (1.00, 0.00, 0.00), (0.00, 0.22, 0.78)]
+TURN_ROOT = [(1.00, 0.00, 0.00), (1.00, 0.00, 0.00), (1.00, 0.00, 0.00), (0.98, 0.00, 0.02), (0.30, 0.13, 0.58), (0.24, 0.76, 0.00), (0.74, 0.25, 0.01), (0.77, 0.20, 0.03), (0.18, 0.33, 0.49), (0.00, 0.00, 1.00)]
+TURN_X = [(1.00, 0.00, 0.00), (1.00, 0.00, 0.00), (1.00, 0.00, 0.00), (1.00, 0.00, 0.00), (1.00, 0.00, 0.00), (0.59, 0.41, 0.00), (0.46, 0.54, 0.00), (0.42, 0.57, 0.01), (0.00, 0.54, 0.46), (0.00, 0.00, 1.00)]
 RIVER_X = [(0.00, 0.33, 0.67), (0.00, 0.33, 0.67), (0.32, 0.28, 0.40), (1.00, 0.00, 0.00), (1.00, 0.00, 0.00), (1.00, 0.00, 0.00), (1.00, 0.00, 0.00), (1.00, 0.00, 0.00), (1.00, 0.00, 0.00), (1.00, 0.00, 0.00), (1.00, 0.00, 0.00), (1.00, 0.00, 0.00), (0.05, 0.95, 0.00), (0.03, 0.97, 0.00), (0.04, 0.96, 0.00), (0.00, 0.00, 1.00), (0.00, 0.00, 1.00), (0.00, 0.00, 1.00), (0.00, 0.96, 0.04), (0.00, 0.00, 1.00)]
 
 
@@ -535,7 +537,7 @@ class Bot:
                 w = w * np.where(np.argmax(kv, 1) == 2, 1.0, P["disc_w"])
             if acts.get("flop"):
                 w = self.weight_by_action(w, pct_rank(kv.max(1)), acts["flop"], "flop")
-        if acts.get("turn") and len(b) >= 4:
+        if acts.get("turn") and len(b) >= 4 and not (skip_river and len(b) == 4):
             st = strength(np.concatenate([v2, full[:, :4]], 1))
             w = self.weight_by_action(w, pct_rank(st), acts["turn"], "turn")
         if acts.get("river") and len(b) == 5 and not skip_river:
@@ -609,7 +611,7 @@ class Bot:
         # not facing a bet
         if not can_raise:
             return self.act("check")
-        if street == "river" and P["river_gto"] and not station and not self.panic:
+        if (street == "river" and P["river_gto"] or street == "turn" and P["turn_gto"]) and not station and not self.panic:
             r = self.river_bet(req, hist)
             if r:
                 return r
@@ -642,17 +644,17 @@ class Bot:
 
     def river_bet(self, req, hist):
         """First river action (OOP) or checked to (IP): sample from the solved table."""
-        seq = [act for st, actor, act, r, _ in replay(hist) if st == "river"]
+        seq = [act for st, actor, act, r, _ in replay(hist) if st == req["street"]]
         oop = self.seat != "button"
         if oop and not seq:
-            table, acts = RIVER_ROOT, (0.33, 0.75, 0)
+            table, acts = (TURN_ROOT if req["street"] == "turn" else RIVER_ROOT), (0.33, 0.75, 0)
         elif not oop and seq == ["check"]:
-            table, acts = RIVER_X, (0, 0.33, 0.75)
+            table, acts = (TURN_X if req["street"] == "turn" else RIVER_X), (0, 0.33, 0.75)
         else:
             return None
         E = self.timed(self.equity_post, self.hole, req["board"], hist, True)
-        size = random.choices(acts, weights=table[min(19, int(E * 20))])[0]
-        log(f"h{self.hand_id} river table E={E:.2f} -> {size}")
+        size = random.choices(acts, weights=table[min(len(table) - 1, int(E * len(table)))])[0]
+        log(f"h{self.hand_id} {req['street']} table E={E:.2f} -> {size}")
         return self.act("raise", self.raise_to(req, size)) if size else self.act("check")
 
     @staticmethod
