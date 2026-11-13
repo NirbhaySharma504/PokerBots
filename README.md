@@ -116,6 +116,9 @@ which still beats it ~4 in 5): -829 vs v16 and loses to barrel/bigbet/xr16, thou
 checkraiser/maniac/tag. bluff_scale 1 alone -280, 5 -103; calling part alone -888. Bluff threshold raised by opp
 raise rate: -113 / -358. Cutting bluffs when our bluff hands net < 0 in-match: -306 (bluff hands are weak hands, they
 lose vs v16 too, so the signal has no baseline).
+v18 sizing probes (48 seeds vs v18, 14701-14748): preflop 3-bet size .6 / 1.6 pot: -76 / +23; BB raise after a limp
+.6 / 1.6: -105 / -29; value-bet cap .8 / 1.6: +23 / -124. Pot-sized stays. Squeeze (16 at once, taskpolicy -b, vs
+station): v18 max 56.7s of 60, time_frac .03 57.2s (the adaptive budget fills the bank either way), 16/16 both.
 
 ### How much to trust an A/B number
 Null tests (identical bots through `tools/ab.py`): +202 +-83, -171 +-64, -49 +-96 (same seeds as
