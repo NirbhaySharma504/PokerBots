@@ -111,8 +111,7 @@ prior_k, station_cap, pf_call_margin; 48 seeds each): best three (agg_floor .16,
 Also flat or worse (48 seeds vs v16): time_frac .03 -5 / .12 -75 (sample count is not a bottleneck), mdf .5 -1395,
 balanced -625, size_aware 0 -142, disc_learn -15; range-reading constants (raise width .3/.9, call cut .4/1.0,
 call cap 0/.7, check cap .2/.8) best +105 = noise level.
-Outside team's suggestion (bluff_scale 1, call_margin .08, cm_oop .04, mdf 1; they measured +304 vs their bot,
-which still beats it ~4 in 5): -829 vs v16 and loses to barrel/bigbet/xr16, though much better vs
+Loose-defence variant (bluff_scale 1, call_margin .08, cm_oop .04, mdf 1): -829 vs v16 and loses to barrel/bigbet/xr16, though much better vs
 checkraiser/maniac/tag. bluff_scale 1 alone -280, 5 -103; calling part alone -888. Bluff threshold raised by opp
 raise rate: -113 / -358. Cutting bluffs when our bluff hands net < 0 in-match: -306 (bluff hands are weak hands, they
 lose vs v16 too, so the signal has no baseline).
@@ -120,7 +119,7 @@ v18 sizing probes (48 seeds vs v18, 14701-14748): preflop 3-bet size .6 / 1.6 po
 .6 / 1.6: -105 / -29; value-bet cap .8 / 1.6: +23 / -124. Pot-sized stays. Squeeze (16 at once, taskpolicy -b, vs
 station): v18 max 56.7s of 60, time_frac .03 57.2s (the adaptive budget fills the bank either way), 16/16 both.
 Only our bot slowed (taskpolicy -b wrapper, 16 at once) vs full-speed v16, 14801-14832: slow v16 -97 +-84, slow v18
-+164 +-89 (no collapse, so a mild slowdown alone doesn't explain the outside 5/60). v18 real stage 2 vs v16
++164 +-89 (no collapse under a mild slowdown). v18 real stage 2 vs v16
 (14901-14916): +351 +-137 (12/4), max 34.9s of 75; pool 14921-14928 all positive, every opponent won on average.
 
 ### How much to trust an A/B number
