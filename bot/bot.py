@@ -634,6 +634,8 @@ class Bot:
                     cap = P["station_cap"]
             elif P["balanced"]:
                 frac = self.bal_size(rr)
+            if not station:  # value bets in the bluff size range: bigger value sizes were a tell
+                frac = P["bluff_size"] + 0.2 * (random.random() - 0.5)  # (a size reader beat v18 ~-900)
             return self.act("raise", self.raise_to(req, min(cap, frac)))
         # bluff / semi-bluff
         if street == "river":
