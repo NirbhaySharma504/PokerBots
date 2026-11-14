@@ -61,6 +61,7 @@ Submission: `bot/bot.py` (single file, stdlib + numpy only). Deadline 15 Nov 202
 | v16 | tiny-bet margin shrink squared: margin x min(1, r/0.3)^2 (a 1/8 pot bet now gets ~0.19 of the margin instead of ~0.42) | vs tiny13 paired with v15: +241 -> +561 (8101-8136), +131 -> +330 (8201-8248); vs v15 +100 / +55; pool 8301-8328 bigbet +141, minbettor +121, smallball 0, nasty -78, barrel -150 (barrel never bets < 0.3 pot, so noise); pow 3: tiny13 +673 but v15 -68 |
 | v17 | all-in threshold: raise_to() only rounds up to a jam when the raise is >= 85% of the stack (was 60%) | vs v16: +164 +-40 (60/36), +198 +-39 (69/27) on two fresh 96-seed sets (0.75 +113, 1.0 +147); real stage 2 +332 +-148 (17/7); paired pool vs v16 on 13101-13128: v13 -10 -> +212 (12/16 -> 17/11), maniac +711, nasty +356, bigbet +145, barrel +134, tag/raiser16/flopjam +12..+44, jammer -122, station -49; gauntlet 36/36, fuzz ok |
 | v18 | panic mode keeps a small Monte Carlo (300 samples) when the shortage is just ms per hand; a cost overrun (cost_ema > 0.8 share, < 1.5s left, < 15ms/hand) still drops to the no-MC quick_equity path | forced panic vs v17: +68 +-85 (14/10) vs old panic -1007 (1/23) / -1166 (0/24) / -859 vs v16 (2/22); normal play vs v17 -41 +-45 (identical code path); 16 matches at once on efficiency cores vs station: 16/16 survive, max 58.4s of 60 (same as v16 / v17; a version with MC in every panic forfeited all 16, so the overrun tier matters); gauntlet 36/36, fuzz ok |
+| v19 | value bets use the bluff size (0.33 +-0.1 pot, not vs stations): v18 bluffed small and value-bet >= 0.45, so its bet size gave its hand away. A v18 copy that only reads our size (opponents/rt3_readonly) beat v18 -757..-1042 per match | vs v18: +90 +-67 (16701-16748), +156 +-45 (65/31, 16901-16996); real stage 2 +159 +-144 (10/6); size readers paired v18 -> v19: rt3_readonly -757 -> -278 and -1042 -> -235, rt3_stab -1210 -> -591, rt2_sizeread -534 -> -242, rt3_cheapxr -918 -> -616; pool flat (maniac, station, checkraiser, lag_eq, smallball, nasty, barrel) with small drops vs bigbet -295, xr16 -259, tag -142, threebet -114 (all still won); bluffs at value size instead -139 vs v18; everything at 0.45 -142; squeeze 16/16, max 57.6s of 60; fuzz ok |
 
 v6 also beats v1 / v2 / v3 / v1_aggro by +700 to +800 each (no rock-paper-scissors).
 
@@ -121,6 +122,12 @@ station): v18 max 56.7s of 60, time_frac .03 57.2s (the adaptive budget fills th
 Only our bot slowed (taskpolicy -b wrapper, 16 at once) vs full-speed v16, 14801-14832: slow v16 -97 +-84, slow v18
 +164 +-89 (no collapse under a mild slowdown). v18 real stage 2 vs v16
 (14901-14916): +351 +-137 (12/4), max 34.9s of 75; pool 14921-14928 all positive, every opponent won on average.
+Red-team pass on v18 (exploit bots in opponents/, 16 seeds each vs v18): size readers rt3_readonly -915,
+rt3_sizeread -958, rt3_stab -930, rt3_cheapxr -1133, rt3_capraise -1016, rt2_sizeread -565, rt2_combo -886;
+raise-everything punish18 -652; flop check-raise rt1_xrflop -224 / -517; river 1.5x overbets rt1_riverover -200 / -158;
+neutral: river-only, style switch, 3-bet jams, tiny bets, min-raise, floats. Fixes that failed vs punish18-type
+raisers: calling wider when the opponent raises often (rx: raiser16 -1230, xr16 -1224; raise rate and showdown
+bluff rate look the same for punishers and value raisers), checking medium hands instead of betting (-283 / -444).
 
 ### How much to trust an A/B number
 Null tests (identical bots through `tools/ab.py`): +202 +-83, -171 +-64, -49 +-96 (same seeds as
