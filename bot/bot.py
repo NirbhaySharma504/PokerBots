@@ -33,7 +33,7 @@ P = {
     "pf_reraise_t": 0.62, "pf_call_margin": 0.04,
     "raise_t": 0.68, "call_margin": 0.22, "bluff_raise": 0.3,
     "bet_t": 0.58, "bet_base": 0.45, "bet_slope": 0.5, "bluff_scale": 30,
-    "disc_w": 0.35, "agg_floor": 0.08, "mdf": 0.0, "size_aware": 1, "balanced": 0, "bal_frac": 0.7, "bluff_size": 0.33, "trap_p": 1.0, "river_gto": 1, "steal_k": 0.1, "disc_learn": 0, "prior_k": 1.0, "time_frac": 0.06, "station_cap": 1.6, "cm_ip": 0.0, "cm_oop": 0.12, "cm_size": 0.3, "mini_n": 300,
+    "disc_w": 0.35, "agg_floor": 0.08, "mdf": 0.0, "size_aware": 1, "balanced": 0, "bal_frac": 0.7, "bluff_size": 0.33, "trap_p": 1.0, "river_gto": 1, "steal_k": 0.1, "disc_learn": 0, "prior_k": 1.0, "time_frac": 0.06, "station_cap": 1.6, "cm_ip": 0.0, "cm_oop": 0.12, "cm_size": 0.3, "mini_n": 300, "pf_big_on": 1, "pf_big_r": 3.0, "rr3_e": 0.35, "rr3_p": 0.3, "rr3_size": 0.7, "rr3_g": 0.32,
 }
 try:
     import os
@@ -221,7 +221,7 @@ class OppModel:
             "pf_face_n", "pf_face_fold", "pf_face_raise",
             "po_open_n", "po_open",
             "po_face_n", "po_face_fold", "po_face_raise",
-            "sd_n", "agg_sd_n", "agg_sd_weak", "po_open_mid", "po_open_big", "disc_n", "disc_heur", "disc_low", "hands")}
+            "sd_n", "agg_sd_n", "agg_sd_weak", "po_open_mid", "po_open_big", "disc_n", "disc_heur", "disc_low", "hands", "pf_big")}
 
     def f(self, a, n, prior, w):
         w = w * P["prior_k"]
@@ -310,6 +310,8 @@ class OppModel:
 
     def update(self, history):
         for street, actor, act, r, facing in replay(history):
+            if actor == "opp" and street == "preflop" and act == "raise" and r > P["pf_big_r"]:
+                self.c["pf_big"] += 1
             if actor == "opp" and street != "preflop" and act == "raise" and not facing:
                 if r > 1.2:
                     self.c["po_open_big"] += 1
@@ -435,10 +437,16 @@ class Bot:
         floor = 0.04
         if street != "preflop":  # learned: how often their aggression is a bluff
             floor = float(np.clip(P["agg_floor"] * o.bluff_rate / 0.25, 0.02, 0.6))
+        big = 1.0
+        if street == "preflop" and P["pf_big_on"] and acts["r"] > P["pf_big_r"]:
+            # jams / huge 3-bets: only as wide as how often they make them (a jam-everything
+            # bot keeps its wide range, a top-10% jammer gets read as top 10%)
+            n = o.c["pf_open_n"] + o.c["pf_face_n"]
+            big = (o.c["pf_big"] + 0.08 * 6) / (n + 6)
         if nr >= 2:
-            w = w * soft(pct, 1 - min(open_f, face_raise) * 0.6, 0.07, floor)
+            w = w * soft(pct, 1 - min(open_f, face_raise, big) * 0.6, 0.07, floor)
         elif nr == 1:
-            width = max(open_f, face_raise)
+            width = min(max(open_f, face_raise), big)
             if P["size_aware"] and street != "preflop":
                 if acts["open"]:
                     width = o.open_width(acts["r"])
@@ -604,6 +612,11 @@ class Bot:
                                                        else (0.9 if E > 0.85 else 0.7)))
             if E >= odds + margin:
                 return self.act("call")
+            # raised after our own flop bet with a medium hand: sometimes re-raise instead of
+            # folding, so raising every bet stops being free
+            if (can_raise and street == "flop" and req["my_bet"] > 0 and E > P["rr3_e"]
+                    and rr < P["rr3_p"] and o.po_raise > P["rr3_g"]):
+                return self.act("raise", self.raise_to(req, P["rr3_size"]))
             if self.mdf_defend(street, E, odds, o):
                 return self.act("call")
             # occasional bluff-raise vs folders, with some equity on early streets
