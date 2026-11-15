@@ -131,6 +131,8 @@ raisers: calling wider when the opponent raises often (rx: raiser16 -1230, xr16 
 bluff rate look the same for punishers and value raisers), checking medium hands instead of betting (-283 / -444).
 Showdowns after a raise of our bet don't separate them either (5-17% weak for every opponent: we only call
 raises with good hands, so bluff-raises never reach showdown). Re-raising medium hands gated on raise rate does work (v20).
+On top of v20 (19001-19048 vs v20, pool 19101-19116): also re-raising on the turn +1 +-53, re-raise 20% -22, 40% +8;
+exploit-pool changes all inside the +-200 noise, so v20 keeps flop-only at 30%.
 
 ### How much to trust an A/B number
 Null tests (identical bots through `tools/ab.py`): +202 +-83, -171 +-64, -49 +-96 (same seeds as
